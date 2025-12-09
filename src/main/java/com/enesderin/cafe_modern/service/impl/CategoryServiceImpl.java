@@ -34,7 +34,7 @@ public class CategoryServiceImpl implements CategoryService {
             CategoryResponse categoryResponse = new CategoryResponse();
             categoryResponse.setId(category.getId());
             categoryResponse.setName(category.getName());
-            categoryResponse.setImageUrl(category.getImageUrl()); // 🔹 EKLE
+            categoryResponse.setImageUrl(category.getImageUrl());
             categoryResponseList.add(categoryResponse);
         }
         return categoryResponseList;
@@ -45,7 +45,7 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = new Category();
         category.setName(categoryRequest.getName());
 
-        // 🔹 Görsel kaydet
+
         if (categoryRequest.getImageFile() != null && !categoryRequest.getImageFile().isEmpty()) {
             try {
                 String fileName = UUID.randomUUID() + "_" + categoryRequest.getImageFile().getOriginalFilename();
@@ -64,7 +64,7 @@ public class CategoryServiceImpl implements CategoryService {
         CategoryResponse response = new CategoryResponse();
         response.setId(category.getId());
         response.setName(category.getName());
-        response.setImageUrl(category.getImageUrl()); // 🔹 Response’a ekle
+        response.setImageUrl(category.getImageUrl());
         return response;
     }
 

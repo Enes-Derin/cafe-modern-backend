@@ -17,14 +17,12 @@ public class AdminMenuItemControllerImpl extends RestBaseController implements A
 
     private final MenuItemService menuItemService;
 
-    // --- CREATE ---
     @PostMapping(consumes = "multipart/form-data")
     @Override
     public RootEntity<MenuItemResponse> add(@ModelAttribute MenuItemRequest menuItemRequest) {
         return ok(menuItemService.save(menuItemRequest));
     }
 
-    // --- UPDATE ---
     @PutMapping(value = "/{id}", consumes = "multipart/form-data")
     @Override
     public RootEntity<MenuItemResponse> update(
@@ -34,7 +32,6 @@ public class AdminMenuItemControllerImpl extends RestBaseController implements A
         return ok(menuItemService.update(id, menuItemRequest));
     }
 
-    // --- DELETE ---
     @DeleteMapping("/{id}")
     @Override
     public RootEntity<String> delete(@PathVariable Long id) {

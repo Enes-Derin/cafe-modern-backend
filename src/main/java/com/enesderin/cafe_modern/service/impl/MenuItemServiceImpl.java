@@ -57,7 +57,6 @@ public class MenuItemServiceImpl implements MenuItemService {
     @Override
     public MenuItemResponse save(MenuItemRequest menuItemRequest) {
         try {
-            // 🔹 Görsel kaydet
             String fileName = null;
             if (menuItemRequest.getImageFile() != null && !menuItemRequest.getImageFile().isEmpty()) {
                 fileName = UUID.randomUUID() + "_" + menuItemRequest.getImageFile().getOriginalFilename();
@@ -67,7 +66,6 @@ public class MenuItemServiceImpl implements MenuItemService {
                 Files.write(filePath, menuItemRequest.getImageFile().getBytes());
             }
 
-            // 🔹 Entity oluştur
             MenuItem menuItem = new MenuItem();
             menuItem.setName(menuItemRequest.getName());
             menuItem.setDescription(menuItemRequest.getDescription());
