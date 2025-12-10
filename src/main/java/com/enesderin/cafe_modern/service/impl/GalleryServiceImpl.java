@@ -61,7 +61,7 @@ public class GalleryServiceImpl implements GalleryService {
             Map upload = cloudinary.uploader().upload(
                     file.getBytes(),
                     ObjectUtils.asMap(
-                            "public_id","cafe-modern/gallery/"+fileName,
+                            "public_id","cafe-modern/gallery/"+UUID.randomUUID(),
                             "overwrite",true
                     )
             );
