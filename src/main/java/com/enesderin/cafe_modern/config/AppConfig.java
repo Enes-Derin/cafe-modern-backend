@@ -1,5 +1,7 @@
 package com.enesderin.cafe_modern.config;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import com.enesderin.cafe_modern.exception.BaseException;
 import com.enesderin.cafe_modern.exception.ErrorMessage;
 import com.enesderin.cafe_modern.exception.MessageType;
@@ -76,6 +78,15 @@ public class AppConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
+    }
+
+    @Bean
+    public Cloudinary cloudinary() {
+        return new Cloudinary(ObjectUtils.asMap(
+                "cloud_name", System.getenv("CLOUDINARY_CLOUD_NAME"),
+                "api_key", System.getenv("CLOUDINARY_API_KEY"),
+                "api_secret", System.getenv("CLOUDINARY_API_SECRET")
+        ));
     }
 
 }

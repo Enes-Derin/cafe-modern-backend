@@ -1,5 +1,7 @@
 package com.enesderin.cafe_modern.service.impl;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import com.enesderin.cafe_modern.dto.request.CategoryRequest;
 import com.enesderin.cafe_modern.dto.response.CategoryResponse;
 import com.enesderin.cafe_modern.exception.BaseException;
@@ -11,20 +13,18 @@ import com.enesderin.cafe_modern.service.CategoryService;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 @AllArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
 
-    private CategoryRepository categoryRepository;
-
-    private final String UPLOAD_DIR = "uploads/categories";
+    private final CategoryRepository categoryRepository;
+    private final Cloudinary cloudinary; // Cloudinary bean gelecek
 
     @Override
     public List<CategoryResponse> getAll() {
@@ -45,27 +45,12 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = new Category();
         category.setName(categoryRequest.getName());
 
-
         if (categoryRequest.getImageFile() != null && !categoryRequest.getImageFile().isEmpty()) {
-            try {
-                String fileName = UUID.randomUUID() + "_" + categoryRequest.getImageFile().getOriginalFilename();
-                Path uploadPath = Paths.get(UPLOAD_DIR);
-                Files.createDirectories(uploadPath);
-                Path filePath = uploadPath.resolve(fileName);
-                Files.write(filePath, categoryRequest.getImageFile().getBytes());
-                category.setImageUrl("/uploads/categories/" + fileName);
-            } catch (Exception e) {
-                throw new BaseException(new ErrorMessage(MessageType.GENERAL_EXCEPTION, "Image upload error"));
-            }
+            category.setImageUrl(uploadToCloudinary(categoryRequest));
         }
 
         categoryRepository.save(category);
-
-        CategoryResponse response = new CategoryResponse();
-        response.setId(category.getId());
-        response.setName(category.getName());
-        response.setImageUrl(category.getImageUrl());
-        return response;
+        return toResponse(category);
     }
 
     @Override
@@ -76,25 +61,31 @@ public class CategoryServiceImpl implements CategoryService {
                 ));
 
         category.setName(req.getName());
-        saveImageIfExists(req, category);
-        categoryRepository.save(category);
 
+        if (req.getImageFile() != null && !req.getImageFile().isEmpty()) {
+            category.setImageUrl(uploadToCloudinary(req));
+        }
+
+        categoryRepository.save(category);
         return toResponse(category);
     }
 
-    private void saveImageIfExists(CategoryRequest req, Category category) {
-        if (req.getImageFile() != null && !req.getImageFile().isEmpty()) {
-            try {
-                String fileName = UUID.randomUUID() + "_" + req.getImageFile().getOriginalFilename();
-                Path uploadPath = Paths.get(UPLOAD_DIR);
-                Files.createDirectories(uploadPath);
-                Files.write(uploadPath.resolve(fileName), req.getImageFile().getBytes());
+    private String uploadToCloudinary(CategoryRequest req) {
+        try {
+            String fileName = UUID.randomUUID().toString();
+            Map upload = cloudinary.uploader().upload(
+                    req.getImageFile().getBytes(),
+                    ObjectUtils.asMap(
+                            "public_id", "cafe-modern/categories/" + fileName,
+                            "overwrite", true
+                    )
+            );
 
-                category.setImageUrl("/uploads/categories/" + fileName);
+            return upload.get("secure_url").toString();
 
-            } catch (Exception e) {
-                throw new BaseException(new ErrorMessage(MessageType.GENERAL_EXCEPTION, "Image upload error"));
-            }
+        } catch (IOException e) {
+            throw new BaseException(new ErrorMessage(MessageType.GENERAL_EXCEPTION,
+                    "Image upload error: " + e.getMessage()));
         }
     }
 
@@ -105,7 +96,6 @@ public class CategoryServiceImpl implements CategoryService {
                 cat.getImageUrl()
         );
     }
-
 
     @Override
     public void delete(Long id) {
