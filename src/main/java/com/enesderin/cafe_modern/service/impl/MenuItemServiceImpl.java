@@ -1,5 +1,7 @@
 package com.enesderin.cafe_modern.service.impl;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import com.enesderin.cafe_modern.dto.request.MenuItemRequest;
 import com.enesderin.cafe_modern.dto.response.MenuItemResponse;
 import com.enesderin.cafe_modern.exception.BaseException;
@@ -11,12 +13,15 @@ import com.enesderin.cafe_modern.repository.MenuItemRepository;
 import com.enesderin.cafe_modern.service.MenuItemService;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -26,7 +31,7 @@ public class MenuItemServiceImpl implements MenuItemService {
     private final MenuItemRepository menuItemRepository;
     private final CategoryRepository categoryRepository;
 
-    private final String UPLOAD_DIR = "uploads/menu-items";
+    private Cloudinary cloudinary;
 
     @Override
     public List<MenuItemResponse> getByCategory(Long categoryId) {
@@ -56,35 +61,23 @@ public class MenuItemServiceImpl implements MenuItemService {
 
     @Override
     public MenuItemResponse save(MenuItemRequest menuItemRequest) {
-        try {
-            String fileName = null;
-            if (menuItemRequest.getImageFile() != null && !menuItemRequest.getImageFile().isEmpty()) {
-                fileName = UUID.randomUUID() + "_" + menuItemRequest.getImageFile().getOriginalFilename();
-                Path uploadPath = Paths.get(UPLOAD_DIR);
-                Files.createDirectories(uploadPath);
-                Path filePath = uploadPath.resolve(fileName);
-                Files.write(filePath, menuItemRequest.getImageFile().getBytes());
-            }
-
-            MenuItem menuItem = new MenuItem();
-            menuItem.setName(menuItemRequest.getName());
-            menuItem.setDescription(menuItemRequest.getDescription());
-            menuItem.setPrice(menuItemRequest.getPrice());
-            menuItem.setCategory(categoryRepository.findById(menuItemRequest.getCategoryId()).orElseThrow());
-
-            if (fileName != null) {
-                menuItem.setImageUrl("/uploads/menu-items/" + fileName);
-            }
-
-            menuItemRepository.save(menuItem);
-
-            return mapToResponse(menuItem);
-
-        } catch (Exception e) {
-            throw new BaseException(
-                    new ErrorMessage(MessageType.GENERAL_EXCEPTION, "Image upload error")
-            );
+       MenuItem menuItem = new MenuItem();
+       menuItem.setName(menuItemRequest.getName());
+       menuItem.setDescription(menuItemRequest.getDescription());
+       menuItem.setPrice(menuItemRequest.getPrice());
+       menuItem.setCategory(categoryRepository.findById(menuItemRequest.getCategoryId()).orElseThrow(() -> new BaseException(new ErrorMessage(MessageType.USERNAME_NOT_FOUND, "Category not found"))));
+        if (menuItemRequest.getImageFile() != null && !menuItemRequest.getImageFile().isEmpty()) {
+            menuItem.setImageUrl(uploadToCloudinary(menuItemRequest));
         }
+        MenuItem saved = this.menuItemRepository.save(menuItem);
+        MenuItemResponse itemResponse = new MenuItemResponse();
+        itemResponse.setId(saved.getId());
+        itemResponse.setName(saved.getName());
+        itemResponse.setDescription(saved.getDescription());
+        itemResponse.setPrice(saved.getPrice());
+        itemResponse.setCategoryId(saved.getCategory().getId());
+        itemResponse.setImageUrl(saved.getImageUrl());
+        return itemResponse;
     }
 
     @Override
@@ -102,12 +95,7 @@ public class MenuItemServiceImpl implements MenuItemService {
 
         try {
             if (menuItemRequest.getImageFile() != null && !menuItemRequest.getImageFile().isEmpty()) {
-                String fileName = UUID.randomUUID() + "_" + menuItemRequest.getImageFile().getOriginalFilename();
-                Path uploadPath = Paths.get(UPLOAD_DIR);
-                Files.createDirectories(uploadPath);
-                Path filePath = uploadPath.resolve(fileName);
-                Files.write(filePath, menuItemRequest.getImageFile().getBytes());
-                menuItem.setImageUrl("/uploads/menu-items/" + fileName);
+                menuItem.setImageUrl(uploadToCloudinary(menuItemRequest));
             }
         } catch (Exception e) {
             throw new BaseException(
@@ -115,19 +103,32 @@ public class MenuItemServiceImpl implements MenuItemService {
             );
         }
 
-        menuItemRepository.save(menuItem);
-        return mapToResponse(menuItem);
+        MenuItem saved = menuItemRepository.save(menuItem);
+        MenuItemResponse itemResponse = new MenuItemResponse();
+        itemResponse.setId(saved.getId());
+        itemResponse.setName(saved.getName());
+        itemResponse.setDescription(saved.getDescription());
+        itemResponse.setPrice(saved.getPrice());
+        itemResponse.setCategoryId(saved.getCategory().getId());
+        itemResponse.setImageUrl(saved.getImageUrl());
+        return itemResponse;
+
     }
 
-    private MenuItemResponse mapToResponse(MenuItem menuItem) {
-        MenuItemResponse res = new MenuItemResponse();
-        res.setId(menuItem.getId());
-        res.setName(menuItem.getName());
-        res.setDescription(menuItem.getDescription());
-        res.setPrice(menuItem.getPrice());
-        res.setImageUrl(menuItem.getImageUrl());
-        res.setCategoryId(menuItem.getCategory().getId());
-        return res;
+
+    private String uploadToCloudinary(MenuItemRequest menuItemRequest) {
+        try{
+            String fileName = UUID.randomUUID().toString() + "_" + menuItemRequest.getImageFile().getOriginalFilename();
+            Map upload = cloudinary.uploader().upload(
+                    menuItemRequest.getImageFile().getBytes(),
+                    ObjectUtils.asMap(
+                            "public_id","cafe-modern/menu-items/" + fileName,
+                            "overwrite",true)
+            );
+            return upload.get("secure_url").toString();
+        }catch (IOException e){
+            throw new BaseException(new ErrorMessage(MessageType.GENERAL_EXCEPTION, "Image upload error"));
+        }
     }
 
 

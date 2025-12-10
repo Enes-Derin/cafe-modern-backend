@@ -1,7 +1,12 @@
 package com.enesderin.cafe_modern.service.impl;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import com.enesderin.cafe_modern.dto.request.GalleryRequest;
 import com.enesderin.cafe_modern.dto.response.GalleryResponse;
+import com.enesderin.cafe_modern.exception.BaseException;
+import com.enesderin.cafe_modern.exception.ErrorMessage;
+import com.enesderin.cafe_modern.exception.MessageType;
 import com.enesderin.cafe_modern.model.GalleryImage;
 import com.enesderin.cafe_modern.repository.GalleryImageRepository;
 import com.enesderin.cafe_modern.service.GalleryService;
@@ -15,6 +20,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 @Service
 @AllArgsConstructor
@@ -22,7 +28,7 @@ public class GalleryServiceImpl implements GalleryService {
 
     private final GalleryImageRepository galleryImageRepository;
 
-    private final String UPLOAD_DIR = "uploads/gallery";
+    private Cloudinary cloudinary;
 
     @Override
     public List<GalleryResponse> getAll() {
@@ -37,23 +43,34 @@ public class GalleryServiceImpl implements GalleryService {
     @Override
     public GalleryResponse save(MultipartFile file) {
         try {
-            Path uploadPath = Paths.get(UPLOAD_DIR);
-            Files.createDirectories(uploadPath);
-
-            String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-            Path filePath = uploadPath.resolve(fileName);
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-            GalleryImage image = new GalleryImage();
-            image.setImageUrl("/uploads/gallery/" + fileName);
-            galleryImageRepository.save(image);
-
-            return new GalleryResponse(image.getId(), image.getImageUrl());
+           String imageUrl = uploadToCloudinary(file);
+           GalleryImage galleryImage = new GalleryImage();
+           galleryImage.setImageUrl(imageUrl);
+           galleryImageRepository.save(galleryImage);
+           return new GalleryResponse(galleryImage.getId(), imageUrl);
 
         } catch (Exception e) {
-            throw new RuntimeException("Gallery upload failed: " + e.getMessage());
+            throw new BaseException(new ErrorMessage(MessageType.GENERAL_EXCEPTION,""));
         }
     }
+
+
+    public String uploadToCloudinary(MultipartFile file) {
+        try{
+            String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+            Map upload = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "public_id","cafe-modern/gallery/"+fileName,
+                            "overwrite",true
+                    )
+            );
+            return upload.get("secure_url").toString();
+        }catch(Exception e){
+            throw new BaseException(new ErrorMessage(MessageType.GENERAL_EXCEPTION,""));
+        }
+    }
+
 
     @Override
     public Long delete(Long id) {
