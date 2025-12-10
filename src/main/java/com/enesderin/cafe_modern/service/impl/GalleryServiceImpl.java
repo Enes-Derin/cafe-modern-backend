@@ -56,20 +56,18 @@ public class GalleryServiceImpl implements GalleryService {
 
 
     public String uploadToCloudinary(MultipartFile file) {
-        try {
+        try{
+            String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
             Map upload = cloudinary.uploader().upload(
-                    file.getInputStream(),
+                    file.getBytes(),
                     ObjectUtils.asMap(
-                            "folder", "cafe-modern/gallery",
-                            "resource_type", "image",
-                            "quality", "auto",
-                            "fetch_format", "auto"
+                            "public_id","cafe-modern/gallery/"+UUID.randomUUID(),
+                            "overwrite",true
                     )
             );
             return upload.get("secure_url").toString();
-
-        } catch (Exception e) {
-            throw new BaseException(new ErrorMessage(MessageType.GENERAL_EXCEPTION, ""));
+        }catch(Exception e){
+            throw new BaseException(new ErrorMessage(MessageType.GENERAL_EXCEPTION,""));
         }
     }
 
