@@ -57,7 +57,6 @@ public class GalleryServiceImpl implements GalleryService {
 
     public String uploadToCloudinary(MultipartFile file) {
         try{
-            String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
             Map upload = cloudinary.uploader().upload(
                     file.getBytes(),
                     ObjectUtils.asMap(

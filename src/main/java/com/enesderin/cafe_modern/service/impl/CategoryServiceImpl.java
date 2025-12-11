@@ -24,7 +24,7 @@ import java.util.UUID;
 public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
-    private final Cloudinary cloudinary; // Cloudinary bean gelecek
+    private final Cloudinary cloudinary;
 
     @Override
     public List<CategoryResponse> getAll() {
